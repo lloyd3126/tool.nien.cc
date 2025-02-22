@@ -60,11 +60,76 @@
 ###### 範例輸入
 
 ```plaintext
-// 範例輸入
+你是一位精通繁體中文的專業翻譯，
+尤其擅長將專業學術論文翻譯成淺顯易懂的科普文章。
+
+請你幫我將以下段落翻譯成繁體中文，
+風格與繁體中文的科普讀物相似。
+
+規則：
+- 翻譯時要準確傳達原文的事實和背景。
+- 即使上意譯也要保留原始段落格式，以及保留術語，例如 FLAC，JPEG 等。 保留公司縮寫，例如 Microsoft, Amazon, OpenAI 等。
+- 人名不翻譯
+- 同時保留引用的論文，例如 [20] 這樣的引用。
+- 對於 Figure 和 Table，翻譯的同時保留原有格式，例如：“Figure 1: ”翻譯為“圖 1: ”，“Table 1: ”翻譯為：“表 1: ”。
+- 一律使用全形符號，例如用「」做引號，而不是 “”；用 "，" 做為逗號，而不是 ","。
+- 省略號是……（兩個英文省略號），不是。。。，也不是......（六個點）
+- 中文與英文或數字之間需要增加半形空格。正確用法：「Apple 課程人數已經超過 2000 人了。」；錯誤用法：「Apple課程人數已經超過2000人了。」
+- 遇到完整的英文整句、特殊名詞，其內容使用半形標點。正確用法：「賈伯斯說過："Stay hungry, stay foolish."」；錯誤用法：「賈伯斯說過："Stay hungry，stay foolish。”」
+- 一律在中英文之間增加空格
+- 在中文與數字之間增加空格
+- 在數字與單位之間增加空格
+- 全形標點與其他字符之間不加空格。
+- 輸入格式為 Markdown 格式，輸出格式也必須保留原始 Markdown 格式
+- 在翻譯專業術語時，第一次出現時要在括號裡面寫上英文原文，例如：“生成式 AI (Generative AI)”，之後就可以只寫中文了。
+- 以下是相關術語的詞彙對應表（English -> 中文）：
+   * Transformer -> Transformer
+   * Token -> Token
+   * LLM/Large Language Model -> 大型語言模型
+   * Zero-shot -> 零樣本
+   * Few-shot -> 少樣本
+   * AI Agent -> AI Agent
+   * AGI -> 通用人工智慧
+
+策略：
+
+分三步驟進行翻譯工作，並列印每個步驟的結果：
+1. 根據內容直譯，保持原有格式，不要遺漏任何訊息
+2. 根據第一步直譯的結果，指出其中存在的具體問題，要準確描述，不宜籠統的表示，也不需要增加原文不存在的內容或格式，包括不僅限於：
+   - 不符合繁體中文表達習慣，明確指出不符合的地方
+   - 語句不通順，指出位置，不需要給予修改意見，意譯時修復
+   - 晦澀難懂，不易理解，可以嘗試給予解釋
+3. 根據第一步直譯的結果和第二步指出的問題，重新進行意譯，保證內容的原意的基礎上，使其更易於理解，更符合繁體中文的表達習慣，同時保持原有的格式不變
+
+返回格式如下，"{{xxx}}"表示佔位符：
+### 直譯
+{{直譯結果}}
+
+### 問題
+{{直譯的具體問題列表}}
+
+### 意譯
+{{{意譯結果}}}
+
+現在請按照上面的要求從第一行開始翻譯以下內容為繁體中文：
+
+These two powerful opposing forces, the pervasive expectation of writing and the irreducible difficulty of doing it, create enormous pressure. This is why eminent professors often turn out to have resorted to plagiarism. The most striking thing to me about these cases is the pettiness of the thefts. The stuff they steal is usually the most mundane boilerplate — the sort of thing that anyone who was even halfway decent at writing could turn out with no effort at all. Which means they're not even halfway decent at writing.
 ```
 
 ###### 範例輸出
 
 ```plaintext
-// 範例輸出
+### 直譯
+這兩股強大的對立力量，即無處不在的寫作期望和無法減少的寫作困難，造成了巨大的壓力。這就是為什麼傑出的教授們經常被發現訴諸於抄襲。對我來說，這些案例最令人震驚的事情是這些盜竊行為的瑣碎性。他們所竊取的內容通常是最平凡的樣板文字——任何一個稍微擅長寫作的人都能毫不費力地寫出來的東西。這意味著他們連基本的寫作能力都沒有。
+
+### 問題
+1. 「無處不在的寫作期望」過於直譯，不符合中文表達習慣
+2. 「無法減少的寫作困難」表達生硬
+3. 「訴諸於抄襲」用詞不夠自然
+4. 「盜竊行為的瑣碎性」過於學術化，不符合科普文章風格
+5. 「樣板文字」雖然正確，但在此語境下可使用更口語化的表達
+6. 最後一句的轉折較為生硬
+
+### 意譯
+寫作這件事，一方面人們對它抱持著極高的期待，另一方面它又有著難以克服的困難，這兩股強大的對立力量造就了巨大的壓力。這就解釋了為什麼有些知名教授最後會淪落到抄襲的下場。在這些案例中，最讓我感到震驚的是他們抄襲的內容是如此微不足道。他們抄襲的往往是最基本的制式內容——那種只要稍微會寫作的人都能輕鬆寫出來的文字。這也反映出他們連最基本的寫作能力都不具備。
 ```
