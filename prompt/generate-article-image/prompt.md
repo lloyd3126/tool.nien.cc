@@ -1,5 +1,3 @@
-v20250222
-
 ```plaintext
 ## 需求
 1. 請你根據指定文字發想一個情境。
@@ -48,15 +46,3 @@ ${中文提示詞}
 
 [指定文字]
 ```
-
----
-
-嗨！我們收到你的需求了。
-
-我是攝影師林默然，過去 12 年帶著我的 Canon EOS R5 Mark II 走訪 37 座城市記錄文字消亡的痕跡。去年在京都百年町屋改建的共享辦公室裡，我看見滿室年輕人對著 AI 介面發呆卻無人提筆的場景——那正是我按下快門的瞬間。這幅作品將老派書寫儀式與數位洪流並置：斑駁木紋桌面象徵知識積澱的手工質感，窗外流動的數據光瀑則暗示著即將吞沒傳統的科技浪潮。當代知識份子正站在紙本與雲端的斷層帶上，這幀影像就是我們這代人的《最後的晚餐》。
-
-A solitary writer in a retro study, surrounded by floating holographic screens displaying AI-generated texts, warm amber light from vintage desk lamp casting long shadows on handwritten manuscripts, intricate wood grain textures contrasting with glowing digital interfaces visible through rain-streaked windows, cinematic composition with shallow depth of field, Shot with Canon EOS R5 Mark II
-
-一位孤獨作家身處復古書房內，漂浮的全息螢幕顯示著 AI 生成文字，老式檯燈灑下溫暖琥珀色光線在手寫稿紙投下長影錯落有致的木紋質地與窗外雨痕斑駁的發光數位介面形成對比電影構圖搭配淺景深效果使用 Canon EOS R5 Mark II 拍攝
-
-希望你會喜歡這個作品！
