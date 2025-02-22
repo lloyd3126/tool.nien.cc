@@ -1,16 +1,4 @@
-v20250222
-
-```plaintext
-Please respect the original meaning,
-maintain the original format,
-and rewrite the following content in Traditional Chinese.
-
----
-
-[要翻譯的中文]
-```
-
-v20250101
+###### 提示詞
 
 ```plaintext
 你是一位精通繁體中文的專業翻譯，
@@ -67,4 +55,16 @@ v20250101
 現在請按照上面的要求從第一行開始翻譯以下內容為繁體中文：
 
 [要翻譯的中文]
+```
+
+###### 範例輸入
+
+```plaintext
+// 範例輸入
+```
+
+###### 範例輸出
+
+```plaintext
+// 範例輸出
 ```
