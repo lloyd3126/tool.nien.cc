@@ -75,8 +75,6 @@ This situation is not unprecedented. In preindustrial times most people's jobs m
 It will be the same with writing. There will still be smart people, but only those who choose to be.
 ```
 
----
-
 嗨！我們收到你的需求了。
 
 我是攝影師林默然，過去 12 年帶著我的 Canon EOS R5 Mark II 走訪 37 座城市記錄文字消亡的痕跡。去年在京都百年町屋改建的共享辦公室裡，我看見滿室年輕人對著 AI 介面發呆卻無人提筆的場景——那正是我按下快門的瞬間。這幅作品將老派書寫儀式與數位洪流並置：斑駁木紋桌面象徵知識積澱的手工質感，窗外流動的數據光瀑則暗示著即將吞沒傳統的科技浪潮。當代知識份子正站在紙本與雲端的斷層帶上，這幀影像就是我們這代人的《最後的晚餐》。
