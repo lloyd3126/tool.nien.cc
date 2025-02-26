@@ -21,16 +21,26 @@
         .preview-container {
             background-color: white;
             border: 1px dashed #dee2e6;
-            min-height: 300px;
+            height: 400px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
-            position: relative;
         }
 
         .preview-container.has-content {
             border: 1px solid #28a745;
+        }
+
+        .preview-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100%;
+            min-width: 100%;
         }
 
         .preview-placeholder {
@@ -40,7 +50,8 @@
 
         .preview-container svg {
             max-width: 100%;
-            max-height: 300px;
+            max-height: 100%;
+            cursor: move;
         }
 
         .card {
@@ -71,6 +82,16 @@
             padding: 2px 8px;
             border-radius: 10px;
             font-size: 12px;
+        }
+
+        .zoom-controls {
+            position: absolute;
+            bottom: 5px;
+            left: 5px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 4px;
+            padding: 2px;
         }
     </style>
 </head>
@@ -105,6 +126,17 @@
                             <div class="preview-placeholder">
                                 <p>SVG 預覽區域</p>
                                 <small>貼上 SVG 代碼後將顯示在此處</small>
+                            </div>
+                            <div class="zoom-controls" style="display: none;">
+                                <button id="zoomIn" class="btn btn-sm btn-light">+</button>
+                                <button id="zoomReset" class="btn btn-sm btn-light">100%</button>
+                                <button id="zoomOut" class="btn btn-sm btn-light">-</button>
+                                <button id="fitToView" class="btn btn-sm btn-light" title="適應視窗大小">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path
+                                            d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z" />
+                                    </svg>
+                                </button>
                             </div>
                             <div class="size-badge" id="svgSize" style="display: none;">0 x 0</div>
                         </div>
@@ -169,6 +201,9 @@
             let originalWidth = 0;
             let originalHeight = 0;
             let aspectRatio = 1;
+            let currentZoom = 1;
+            let isDragging = false;
+            let dragStartX, dragStartY, scrollLeft, scrollTop;
 
             // 監聽 SVG 代碼輸入
             $('#svgCode').on('input', function () {
@@ -179,8 +214,23 @@
                     $('#previewContainer').empty().addClass('has-content');
 
                     try {
-                        // 插入 SVG
-                        $('#previewContainer').html(svgCode);
+                        // 創建預覽包裝器
+                        $('#previewContainer').html(`
+                            <div class="preview-wrapper">
+                                ${svgCode}
+                            </div>
+                            <div class="zoom-controls">
+                                <button id="zoomIn" class="btn btn-sm btn-light">+</button>
+                                <button id="zoomReset" class="btn btn-sm btn-light">100%</button>
+                                <button id="zoomOut" class="btn btn-sm btn-light">-</button>
+                                <button id="fitToView" class="btn btn-sm btn-light" title="適應視窗大小">
+                                    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                        <path d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                            <div class="size-badge" id="svgSize"></div>
+                        `);
 
                         // 獲取 SVG 元素
                         const svgElement = $('#previewContainer svg');
@@ -188,13 +238,11 @@
                         if (svgElement.length) {
                             // 啟用下載按鈕
                             $('#downloadSvg, #downloadPng').prop('disabled', false);
+                            $('.zoom-controls').show();
 
                             // 獲取原始尺寸
-                            const svgWidth = svgElement.attr('width') || svgElement[0].viewBox.baseVal.width || 0;
-                            const svgHeight = svgElement.attr('height') || svgElement[0].viewBox.baseVal.height || 0;
-
-                            originalWidth = parseFloat(svgWidth);
-                            originalHeight = parseFloat(svgHeight);
+                            originalWidth = parseFloat(svgElement.attr('width')) || svgElement[0].viewBox.baseVal.width || 0;
+                            originalHeight = parseFloat(svgElement.attr('height')) || svgElement[0].viewBox.baseVal.height || 0;
 
                             if (originalWidth && originalHeight) {
                                 aspectRatio = originalWidth / originalHeight;
@@ -205,9 +253,15 @@
 
                                 // 顯示尺寸信息
                                 $('#svgSize').text(`${Math.round(originalWidth)} × ${Math.round(originalHeight)}`).show();
+
+                                // 自動縮放 SVG 以適應預覽視窗
+                                fitSvgToContainer();
                             } else {
                                 $('#svgSize').hide();
                             }
+
+                            // 設置拖動事件
+                            setupDragEvents();
                         }
                     } catch (error) {
                         $('#previewContainer').html(`
@@ -216,6 +270,7 @@
                             </div>
                         `);
                         $('#downloadSvg, #downloadPng').prop('disabled', true);
+                        $('.zoom-controls').hide();
                     }
                 } else {
                     // 恢復預設預覽區域
@@ -226,7 +281,7 @@
                         </div>
                     `);
                     $('#downloadSvg, #downloadPng').prop('disabled', true);
-                    $('#svgSize').hide();
+                    $('.zoom-controls').hide();
                 }
             });
 
@@ -291,9 +346,9 @@
                 const height = parseInt($('#pngHeight').val());
 
                 // 創建臨時 SVG
-                const tempSvg = document.createElement('svg');
+                const tempSvg = document.createElement('div');
                 tempSvg.innerHTML = svgCode;
-                const svgElement = tempSvg.firstElementChild;
+                const svgElement = tempSvg.querySelector('svg');
 
                 // 創建 Canvas
                 const canvas = document.createElement('canvas');
@@ -309,7 +364,7 @@
 
                 // 將 SVG 轉為圖片
                 const img = new Image();
-                const svgBlob = new Blob([svgCode], { type: 'image/svg+xml' });
+                const svgBlob = new Blob([new XMLSerializer().serializeToString(svgElement)], { type: 'image/svg+xml' });
                 const url = URL.createObjectURL(svgBlob);
 
                 img.onload = function () {
@@ -328,6 +383,105 @@
 
                 img.src = url;
             });
+
+            // 縮放控制
+            $(document).on('click', '#zoomIn', function () {
+                zoomSvg(currentZoom * 1.2);
+            });
+
+            $(document).on('click', '#zoomOut', function () {
+                zoomSvg(currentZoom * 0.8);
+            });
+
+            $(document).on('click', '#zoomReset', function () {
+                zoomSvg(1);
+            });
+
+            $(document).on('click', '#fitToView', function () {
+                fitSvgToContainer();
+            });
+
+            // 縮放 SVG
+            function zoomSvg(zoom) {
+                if (zoom < 0.1) zoom = 0.1;
+                if (zoom > 5) zoom = 5;
+
+                currentZoom = zoom;
+                const svgWrapper = $('.preview-wrapper');
+                const svgElement = $('#previewContainer svg');
+
+                if (svgElement.length) {
+                    svgElement.css({
+                        'transform': `scale(${zoom})`,
+                        'transform-origin': 'center center'
+                    });
+
+                    // 更新縮放按鈕文本
+                    $('#zoomReset').text(`${Math.round(zoom * 100)}%`);
+                }
+            }
+
+            // 使 SVG 適應容器大小
+            function fitSvgToContainer() {
+                const container = $('#previewContainer');
+                const svgElement = $('#previewContainer svg');
+
+                if (!svgElement.length || !originalWidth || !originalHeight) return;
+
+                const containerWidth = container.width();
+                const containerHeight = container.height();
+
+                // 計算適合的縮放比例（考慮一些邊距）
+                const scaleX = (containerWidth - 40) / originalWidth;
+                const scaleY = (containerHeight - 40) / originalHeight;
+
+                // 選擇較小的縮放比例，確保完全顯示
+                const scale = Math.min(scaleX, scaleY);
+
+                zoomSvg(scale);
+
+                // 重置滾動位置到中心
+                container.scrollLeft((svgElement.width() * scale - containerWidth) / 2);
+                container.scrollTop((svgElement.height() * scale - containerHeight) / 2);
+            }
+
+            // 設置拖動事件
+            function setupDragEvents() {
+                const container = $('#previewContainer');
+
+                container.on('mousedown', function (e) {
+                    if ($(e.target).closest('.zoom-controls').length === 0) {
+                        isDragging = true;
+                        dragStartX = e.pageX - container.offset().left;
+                        dragStartY = e.pageY - container.offset().top;
+                        scrollLeft = container.scrollLeft();
+                        scrollTop = container.scrollTop();
+                        container.css('cursor', 'grabbing');
+                    }
+                });
+
+                $(document).on('mousemove', function (e) {
+                    if (!isDragging) return;
+
+                    e.preventDefault();
+                    const x = e.pageX - container.offset().left;
+                    const y = e.pageY - container.offset().top;
+
+                    // 計算滾動距離
+                    const dx = x - dragStartX;
+                    const dy = y - dragStartY;
+
+                    container.scrollLeft(scrollLeft - dx);
+                    container.scrollTop(scrollTop - dy);
+                });
+
+                $(document).on('mouseup mouseleave', function () {
+                    if (isDragging) {
+                        isDragging = false;
+                        container.css('cursor', '');
+                    }
+                });
+            }
         });
     </script>
 </body>
