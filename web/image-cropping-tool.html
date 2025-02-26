@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <title>圖片裁剪工具</title>
+    <!-- 引入 Bootstrap 5.1.1 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- 引入 Bootstrap Icons -->
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        /* 畫布容器樣式 */
+        #canvasContainer {
+            border: 1px solid #ced4da;
+            display: block;
+            position: relative;
+            width: 100%;
+            max-width: 50vh;
+        }
+
+        /* 畫布樣式 */
+        canvas {
+            background-color: transparent;
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        /* 狀態群組樣式 */
+        .status-group {
+            margin-top: 20px;
+        }
+
+        /* 狀態群組中的表單控制樣式 */
+        .status-group .form-control {
+            background-color: #f8f9fa;
+        }
+
+        /* 自訂比例輸入框隱藏 */
+        #customRatioInputs {
+            display: none;
+        }
+
+        /* 高度為40px的樣式 */
+        .height-40px {
+            height: 40px;
+        }
+
+        /* 標籤下方間距 */
+        label {
+            margin-bottom: 5px;
+        }
+
+        /* 當前位置、縮放和旋轉狀態樣式 */
+        #currentPositionScaleRotation {
+            font-size: 10px;
+            margin: 5px 0 0 0;
+        }
+
+        /* 縮圖容器樣式 */
+        #thumbnailContainer {
+            display: flex;
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+
+        /* 單個縮圖樣式 */
+        .thumbnail {
+            border: 1px solid #ced4da;
+            margin-right: 10px;
+            cursor: pointer;
+            position: relative;
+            flex: 0 0 auto;
+        }
+
+        /* 縮圖中的圖片樣式 */
+        .thumbnail img {
+            max-width: 100px;
+            max-height: 100px;
+            display: block;
+        }
+
+        /* 選中縮圖的邊框樣式 */
+        .thumbnail.selected {
+            border: 2px solid #0d6efd;
+        }
+
+        /* 刪除按鈕樣式 */
+        .delete-btn {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            background-color: rgba(255, 34, 68, 0.7);
+            color: white;
+            border: none;
+            border-radius: 2.5px;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            line-height: 10px;
+            cursor: pointer;
+        }
+
+        /* 畫筆功能控制區樣式 */
+        #drawingControls {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        /* 畫筆控制標籤樣式 */
+        #drawingControls label {
+            margin-right: 10px;
+        }
+
+        /* 畫筆控制輸入框樣式 */
+        #drawingControls input {
+            margin-right: 20px;
+        }
+
+        /* 畫筆控制表單控制寬度自動 */
+        #drawingControls .form-control {
+            width: auto;
+        }
+
+        /* 畫布和工具平行排列的樣式 */
+        @media (min-width: 768px) {
+            #canvasAndTools {
+                display: flex;
+                align-items: flex-start;
+                justify-content: start;
+            }
+
+            #canvasContainer {
+                flex: 1;
+                margin-right: 20px;
+            }
+
+            #drawingControls {
+                flex: 0 0 auto;
+                flex-direction: column;
+                align-items: flex-start;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- 導航欄作為標題 -->
+    <nav class="navbar navbar-light bg-light">
+        <div class="container-fluid">
+            <h1 class="navbar-brand mb-0 h1">圖片裁剪工具</h1>
+        </div>
+    </nav>
+    <div class="container mt-3 mb-5">
+        <!-- 畫布比例修改群組 -->
+        <div class="form-group col-12 mb-3">
+            <label for="canvasRatio">畫布比例</label>
+            <div class="input-group">
+                <select class="form-select" id="canvasRatio">
+                    <option value="1:1" selected>1:1</option>
+                    <option value="4:3">4:3</option>
+                    <option value="16:9">16:9</option>
+                    <option value="custom">Custom</option>
+                </select>
+                <div class="input-group-text">
+                    <div id="customRatioInputs">
+                        <input type="number" class="form-control me-2" id="customWidth" placeholder="寬度" min="1">
+                        <input type="number" class="form-control" id="customHeight" placeholder="高度" min="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 縮圖容器 -->
+        <div id="thumbnailContainer"></div>
+
+        <div id="canvasAndTools">
+            <!-- 畫布容器 -->
+            <div id="canvasContainer">
+                <canvas id="canvas"></canvas>
+            </div>
+
+            <!-- 畫筆功能控制區 -->
+            <div id="drawingControls">
+                <label for="brushColor">筆刷顏色</label>
+                <input type="color" id="brushColor" class="form-control mb-2 w-100 height-40px" value="#000000">
+                <label for="brushSize">筆刷大小</label>
+                <input type="number" id="brushSize" class="form-control mb-2 w-100 height-40px" value="5" min="1"
+                    max="50">
+                <button class="btn btn-secondary mb-2 w-100 height-40px" id="toggleDrawingBtn">啟用繪畫</button>
+                <button class="btn btn-secondary mb-2 w-100 height-40px" id="clearDrawingBtn">清除繪畫</button>
+            </div>
+        </div>
+
+        <!-- 顯示當前縮放、旋轉和位置狀態 -->
+        <p class="mb-3" id="currentPositionScaleRotation">
+            縮放比例：0.1；旋轉角度：1.00；水平位置：0.00；垂直位置：0.00
+        </p>
+
+        <div class="row mb-3">
+            <!-- 上傳圖片控制 -->
+            <div class="form-group col-md-4">
+                <label for="uploadImage">上傳圖片</label>
+                <input type="file" class="form-control height-40px" id="uploadImage" accept="image/*" multiple>
+            </div>
+            <!-- 設定背景顏色控制 -->
+            <div class="form-group col-md-4">
+                <label for="backgroundColor">設定背景顏色</label>
+                <div class="input-group">
+                    <input type="color" class="form-control height-40px" id="backgroundColor" value="#F8F9FA">
+                    <div class="input-group-text height-40px">
+                        <div class="form-check form-check-inline">
+                            <input type="checkbox" class="form-check-input" id="transparentBgCheckbox">
+                            <label class="form-check-label m-0" for="transparentBgCheckbox">透明</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 下載寬度控制 -->
+            <div class="form-group col-md-4">
+                <label for="downloadWidth">下載寬度 (px)</label>
+                <div class="input-group height-40px">
+                    <input type="number" class="form-control" id="downloadWidth" placeholder="輸入下載寬度 (px)" step="1"
+                        min="1" value="512">
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <!-- 縮放控制群組 -->
+            <div class="form-group col-md-2">
+                <label for="scaleRatio">縮放控制 (0.1 = 10%)</label>
+                <div class="input-group height-40px">
+                    <input type="number" class="form-control" id="scaleRatio" placeholder="輸入縮放比例 (0.1 = 10%)"
+                        step="0.01" min="0.01" value="0.1">
+                    <button class="btn btn-outline-secondary" id="scaleUpBtn"><i class="bi bi-zoom-in"></i></button>
+                    <button class="btn btn-outline-secondary" id="resetScaleBtn"><i
+                            class="bi bi-bootstrap-reboot"></i></button>
+                    <button class="btn btn-outline-secondary" id="scaleDownBtn"><i class="bi bi-zoom-out"></i></button>
+                </div>
+            </div>
+
+            <!-- 旋轉控制群組 -->
+            <div class="form-group col-md-2">
+                <label for="rotateAngle">旋轉控制 (1 = 1°)</label>
+                <div class="input-group height-40px">
+                    <input type="number" class="form-control" id="rotateAngle" placeholder="輸入旋轉角度 (1 = 1°)" step="1"
+                        min="1" value="1">
+                    <button class="btn btn-outline-secondary" id="rotateCWBtn"><i
+                            class="bi bi-arrow-clockwise"></i></button>
+                    <button class="btn btn-outline-secondary" id="resetRotationBtn"><i
+                            class="bi bi-bootstrap-reboot"></i></button>
+                    <button class="btn btn-outline-secondary" id="rotateCCWBtn"><i
+                            class="bi bi-arrow-counterclockwise"></i></button>
+                </div>
+            </div>
+            <!-- 重置按鈕群組 -->
+            <div class="form-group control-buttons col-md-4">
+                <label for="uploadImage">其他操作</label>
+                <div class="row g-2">
+                    <div class="col-md-3">
+                        <button class="w-100 btn btn-secondary height-40px" id="resetBtn"><i
+                                class="bi bi-bootstrap-reboot"></i> 全部</button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="w-100 btn btn-secondary height-40px" id="resetPositionBtn"><i
+                                class="bi bi-bootstrap-reboot"></i> 位置</button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="w-100 btn btn-secondary height-40px" id="undoBtn"><i
+                                class="bi bi-arrow-90deg-left"></i> 復原</button>
+                    </div>
+                    <div class="col-md-3">
+                        <button class="w-100 btn btn-secondary height-40px" id="redoBtn"><i
+                                class="bi bi-arrow-90deg-right"></i> 重做</button>
+                    </div>
+                </div>
+            </div>
+            <!-- 主要功能按鈕群組 -->
+            <div class="form-group col-md-4">
+                <label for="uploadImage">主要功能</label>
+                <div class="row g-2">
+                    <div class="col-md-6">
+                        <button class="w-100 btn btn-primary height-40px" id="downloadBtn">下載圖檔</button>
+                    </div>
+                    <div class="col-md-6">
+                        <button class="w-100 btn btn-primary height-40px" id="batchDownloadBtn">批次下載</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 引入 jQuery 3.7.1 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <!-- 引入 Bootstrap 5.1.1 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.1/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- 引入 JSZip 和 FileSaver.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <!-- 自定義腳本 -->
+    <script>
+        $(document).ready(function () {
+            // 取得畫布元素及其上下文
+            var canvas = $('#canvas')[0];
+            var ctx = canvas.getContext('2d');
+            var img = new Image();
+            var images = []; // 儲存所有上傳的圖片資訊
+            var currentIndex = -1; // 當前圖片索引
+            var isDragging = false; // 是否正在拖曳
+            var startMouseX = 0; // 拖曳起始鼠標X座標
+            var startMouseY = 0; // 拖曳起始鼠標Y座標
+            var startOffsetX = 0; // 拖曳起始偏移量X
+            var startOffsetY = 0; // 拖曳起始偏移量Y
+            var offsetX = 0; // 畫布偏移量X
+            var offsetY = 0; // 畫布偏移量Y
+            var scale = 1; // 畫布縮放比例
+            var rotation = 0; // 旋轉角度（以度為單位）
+            var minScale = 0.1; // 最小縮放比例
+            var maxScale = 10; // 最大縮放比例
+            var backgroundColor = '#F8F9FA'; // 預設背景色
+            var canvasRatio = '1:1'; // 預設畫布比例
+
+            // 畫筆相關變數
+            var isDrawing = false; // 是否正在繪畫
+            var isDrawingMode = false; // 是否啟用繪畫模式
+            var brushColor = '#000000'; // 筆刷顏色
+            var brushSize = 5; // 筆刷大小
+            var drawingPaths = []; // 儲存繪畫路徑
+
+            // 追踪鼠标是否在画布上
+            var isMouseOverCanvas = false;
+
+            // 初始狀態存儲（不包含 canvasRatio 和 drawingPaths）
+            var initialState = {
+                offsetX: 0,
+                offsetY: 0,
+                scale: 1,
+                rotation: 0,
+                backgroundColor: '#F8F9FA',
+                drawingPaths: []
+            };
+
+            // 設置畫布大小和響應式
+            function resizeCanvas() {
+                var containerWidth = $('#canvasContainer').width();
+                var ratioParts = canvasRatio.split(':');
+                var widthRatio = parseInt(ratioParts[0]);
+                var heightRatio = parseInt(ratioParts[1]);
+                canvas.width = containerWidth;
+                canvas.height = containerWidth * heightRatio / widthRatio;
+                if (currentIndex >= 0) {
+                    drawImage();
+                }
+            }
+
+            // 畫布比例設定函數
+            function setCanvasRatio(ratio) {
+                canvasRatio = ratio;
+                resizeCanvas();
+            }
+
+            // 畫布比例選擇處理
+            $('#canvasRatio').change(function () {
+                var selectedRatio = $(this).val();
+                if (selectedRatio === 'custom') {
+                    $('#customRatioInputs').show();
+                } else {
+                    $('#customRatioInputs').hide();
+                    setCanvasRatio(selectedRatio);
+                    // 不保存畫布比例變更至撤銷堆疊
+                }
+            });
+
+            // 自訂比例輸入框變更處理
+            $('#customWidth, #customHeight').change(function () {
+                var customWidth = parseInt($('#customWidth').val());
+                var customHeight = parseInt($('#customHeight').val());
+                if (customWidth > 0 && customHeight > 0) {
+                    var customRatio = customWidth + ':' + customHeight;
+                    setCanvasRatio(customRatio);
+                    // 不保存畫布比例變更至撤銷堆疊
+                }
+            });
+
+            // 初始畫布大小
+            resizeCanvas();
+
+            // 當窗口大小改變時，調整畫布大小
+            $(window).resize(function () {
+                resizeCanvas();
+            });
+
+            // 撤銷與重做堆疊（不包含 canvasRatio）
+            var undoStack = [];
+            var redoStack = [];
+
+            // 保存當前狀態到撤銷堆疊
+            function saveState() {
+                if (currentIndex < 0) return;
+                var state = {
+                    offsetX: offsetX,
+                    offsetY: offsetY,
+                    scale: scale,
+                    rotation: rotation,
+                    backgroundColor: backgroundColor,
+                    drawingPaths: JSON.parse(JSON.stringify(drawingPaths)) // 深拷貝繪畫路徑
+                };
+                undoStack.push(state);
+                // 限制撤銷堆疊大小（例如 20）
+                if (undoStack.length > 20) {
+                    undoStack.shift();
+                }
+                // 每次新操作後清空重做堆疊
+                redoStack = [];
+                updateUndoRedoButtons();
+            }
+
+            // 應用一個狀態
+            function applyState(state) {
+                offsetX = state.offsetX;
+                offsetY = state.offsetY;
+                scale = state.scale;
+                rotation = state.rotation;
+                backgroundColor = state.backgroundColor;
+                drawingPaths = JSON.parse(JSON.stringify(state.drawingPaths));
+                // 更新勾選框狀態和背景顏色選取器
+                if (backgroundColor === 'transparent') {
+                    $('#transparentBgCheckbox').prop('checked', true);
+                    $('#backgroundColor').prop('disabled', true);
+                } else {
+                    $('#transparentBgCheckbox').prop('checked', false);
+                    $('#backgroundColor').prop('disabled', false);
+                    $('#backgroundColor').val(backgroundColor);
+                }
+                drawImage();
+                updateStatus();
+            }
+
+            // 更新當前狀態顯示
+            function updateStatus() {
+                let currentPositionX = offsetX.toFixed(2)
+                let currentPositionY = offsetY.toFixed(2)
+                let currentScale = scale.toFixed(2)
+                let currentRotation = rotation.toFixed(2)
+                $('#currentPositionScaleRotation').text(`縮放比例：${currentScale}；旋轉角度：${currentRotation}；水平位置：${currentPositionX}；垂直位置：${currentPositionY}`);
+            }
+
+            // 更新撤銷與重做按鈕狀態
+            function updateUndoRedoButtons() {
+                $('#undoBtn').prop('disabled', undoStack.length === 0);
+                $('#redoBtn').prop('disabled', redoStack.length === 0);
+            }
+
+            // 初始化撤銷與重做按鈕
+            updateUndoRedoButtons();
+
+            // 處理圖片上傳
+            $('#uploadImage').change(function (e) {
+                var files = e.target.files;
+                if (files.length === 0) return;
+
+                // 保存當前圖片的狀態
+                saveCurrentImageState();
+
+                var filesLoaded = 0;
+
+                for (var i = 0; i < files.length; i++) {
+                    (function (file, index) {
+                        var reader = new FileReader();
+                        reader.onload = function (event) {
+                            var image = new Image();
+                            image.onload = function () {
+                                // 為每張圖片創建一個單獨的狀態
+                                images.push({
+                                    img: image,
+                                    state: $.extend(true, {}, initialState) // 深拷貝初始狀態
+                                });
+                                var idx = images.length - 1;
+                                // 添加縮圖
+                                addThumbnail(event.target.result, idx);
+                                filesLoaded++;
+                                if (filesLoaded === files.length) {
+                                    if (currentIndex === -1) {
+                                        // 如果之前沒有圖片，顯示第一張圖片
+                                        currentIndex = 0;
+                                        loadCurrentImage();
+                                    }
+                                }
+                            }
+                            image.src = event.target.result;
+                        }
+                        reader.readAsDataURL(file);
+                    })(files[i], i);
+                }
+            });
+
+            // 添加縮圖函數
+            function addThumbnail(src, idx) {
+                var thumbnailDiv = $('<div class="thumbnail"></div>');
+                var thumbnailImg = $('<img>').attr('src', src);
+                thumbnailDiv.append(thumbnailImg);
+                thumbnailDiv.attr('data-index', idx); // 使用 attr 而非 data
+
+                // 添加删除按钮
+                var deleteBtn = $('<button class="delete-btn">&times;</button>');
+                thumbnailDiv.append(deleteBtn);
+
+                // 绑定删除事件
+                deleteBtn.on('click', function (e) {
+                    e.stopPropagation(); // 防止触发缩略图的点击事件
+                    deleteImage(idx);
+                });
+
+                // 绑定点击事件
+                thumbnailDiv.on('click', function () {
+                    saveCurrentImageState();
+                    currentIndex = idx;
+                    loadCurrentImage();
+                });
+
+                $('#thumbnailContainer').append(thumbnailDiv);
+            }
+
+            // 保存當前圖片的狀態
+            function saveCurrentImageState() {
+                if (currentIndex < 0) return;
+                images[currentIndex].state = {
+                    offsetX: offsetX,
+                    offsetY: offsetY,
+                    scale: scale,
+                    rotation: rotation,
+                    backgroundColor: backgroundColor,
+                    drawingPaths: JSON.parse(JSON.stringify(drawingPaths))
+                };
+            }
+
+            // 載入當前圖片
+            function loadCurrentImage() {
+                if (currentIndex < 0 || !images[currentIndex]) {
+                    // 如果没有图片，清空画布
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    return;
+                }
+                // 更新縮圖選中狀態
+                $('.thumbnail').removeClass('selected');
+                $('.thumbnail[data-index="' + currentIndex + '"]').addClass('selected');
+
+                img = images[currentIndex].img;
+                var state = images[currentIndex].state;
+                applyState(state);
+            }
+
+            // 刪除圖片
+            function deleteImage(idx) {
+                if (images.length === 0) return;
+
+                // 移除圖片和狀態
+                images.splice(idx, 1);
+
+                // 更新縮圖容器
+                $('#thumbnailContainer').empty();
+                for (var i = 0; i < images.length; i++) {
+                    addThumbnail(images[i].img.src, i);
+                }
+
+                // 調整 currentIndex
+                if (currentIndex === idx) {
+                    if (images.length === 0) {
+                        currentIndex = -1;
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                    } else if (idx === images.length) {
+                        currentIndex = idx - 1;
+                    } else {
+                        currentIndex = idx;
+                    }
+                } else if (currentIndex > idx) {
+                    currentIndex--;
+                }
+
+                loadCurrentImage();
+            }
+
+            // 繪製圖片函數
+            function drawImage() {
+                // 填充背景色或保持透明
+                if (backgroundColor !== 'transparent') {
+                    ctx.fillStyle = backgroundColor;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                } else {
+                    // 清除畫布，保持透明
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+
+                if (img.src) {
+                    ctx.save();
+                    // 移動畫布原點到中心
+                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    // 縮放
+                    ctx.scale(scale, scale);
+                    // 旋轉（將度轉換為弧度）
+                    ctx.rotate(rotation * Math.PI / 180);
+                    // 繪製圖片，考慮位移
+                    ctx.drawImage(img, -img.width / 2 + offsetX, -img.height / 2 + offsetY);
+                    ctx.restore();
+                }
+
+                // 繪製畫筆繪畫
+                drawPaths();
+            }
+
+            // 繪製畫筆路徑
+            function drawPaths() {
+                if (drawingPaths.length === 0) return;
+                ctx.save();
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                for (var i = 0; i < drawingPaths.length; i++) {
+                    var path = drawingPaths[i];
+                    ctx.strokeStyle = path.color;
+                    ctx.lineWidth = path.size;
+                    ctx.beginPath();
+                    var points = path.points;
+                    if (points.length > 0) {
+                        ctx.moveTo(points[0].x, points[0].y);
+                        for (var j = 1; j < points.length; j++) {
+                            ctx.lineTo(points[j].x, points[j].y);
+                        }
+                    }
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            // 更新畫布上的鼠標樣式
+            function updateCanvasCursor() {
+                if (isMouseOverCanvas) {
+                    if (isDrawingMode) {
+                        generateCursor();
+                    } else {
+                        $('#canvas').css('cursor', 'grab');
+                    }
+                } else {
+                    $('#canvas').css('cursor', 'default');
+                }
+            }
+
+            // 生成自訂鼠標指標
+            function generateCursor() {
+                var cursorCanvas = document.createElement('canvas');
+                var cursorCtx = cursorCanvas.getContext('2d');
+
+                // 定義縮放因子
+                const cursorScale = 0.5; // 例如，0.5 表示指標是筆刷大小的一半
+
+                // 計算指標的尺寸
+                var cursorSize = brushSize * cursorScale * 2; // 直徑
+                cursorCanvas.width = cursorSize;
+                cursorCanvas.height = cursorSize;
+
+                // 計算圓形的半徑
+                var cursorRadius = brushSize * cursorScale;
+
+                // 繪製縮小後的圓形
+                cursorCtx.beginPath();
+                cursorCtx.arc(cursorSize / 2, cursorSize / 2, cursorRadius, 0, Math.PI * 2);
+                cursorCtx.fillStyle = brushColor;
+                cursorCtx.fill();
+
+                // 將 Canvas 轉換為 Data URL
+                var dataURL = cursorCanvas.toDataURL('image/png');
+
+                // 設置指標，並將熱點設置在圓心
+                $('#canvas').css('cursor', 'url(' + dataURL + ') ' + cursorRadius + ' ' + cursorRadius + ', crosshair');
+            }
+
+            // 畫筆功能控制
+            $('#brushColor').change(function () {
+                brushColor = $(this).val();
+                if (isDrawingMode && isMouseOverCanvas) {
+                    generateCursor();
+                }
+            });
+
+            $('#brushSize').change(function () {
+                brushSize = parseInt($(this).val());
+                if (isDrawingMode && isMouseOverCanvas) {
+                    generateCursor();
+                }
+            });
+
+            // 切換繪畫模式按鈕事件
+            $('#toggleDrawingBtn').click(function () {
+                isDrawingMode = !isDrawingMode;
+                if (isDrawingMode) {
+                    $(this).text('停用繪畫');
+                } else {
+                    $(this).text('啟用繪畫');
+                }
+                updateCanvasCursor();
+            });
+
+            // 清除繪畫按鈕事件
+            $('#clearDrawingBtn').click(function () {
+                saveState();
+                drawingPaths = [];
+                drawImage();
+            });
+
+            // 畫布鼠標進入事件
+            $('#canvas').on('mouseenter', function (e) {
+                isMouseOverCanvas = true;
+                updateCanvasCursor();
+            });
+
+            // 畫布鼠標離開事件
+            $('#canvas').on('mouseleave', function (e) {
+                isMouseOverCanvas = false;
+                updateCanvasCursor();
+            });
+
+            // 畫筆繪畫事件
+            $('#canvas').on('mousedown', function (e) {
+                if (!img.src) return; // 如果沒有圖片，則不執行
+
+                var rect = canvas.getBoundingClientRect();
+                var x = (e.clientX - rect.left);
+                var y = (e.clientY - rect.top);
+
+                if (isDrawingMode) {
+                    isDrawing = true;
+                    saveState();
+                    drawingPaths.push({
+                        color: brushColor,
+                        size: brushSize,
+                        points: [{
+                            x: x, y: y
+                        }]
+                    });
+                } else {
+                    isDragging = true;
+                    startMouseX = e.clientX;
+                    startMouseY = e.clientY;
+                    startOffsetX = offsetX;
+                    startOffsetY = offsetY;
+                    // 保存當前狀態
+                    saveState();
+                    $('#canvas').css('cursor', 'grabbing');
+                }
+            });
+
+            // 鼠標移動事件
+            $(document).on('mousemove', function (e) {
+                var rect = canvas.getBoundingClientRect();
+                var x = (e.clientX - rect.left);
+                var y = (e.clientY - rect.top);
+
+                if (isDrawingMode && isDrawing) {
+                    var currentPath = drawingPaths[drawingPaths.length - 1];
+                    currentPath.points.push({
+                        x: x, y: y
+                    });
+                    drawImage();
+                } else if (isDragging) {
+                    var deltaX = e.clientX - startMouseX;
+                    var deltaY = e.clientY - startMouseY;
+
+                    // 將移動量轉換為圖片空間，考慮縮放和旋轉
+                    var rad = rotation * Math.PI / 180;
+                    var cos = Math.cos(rad);
+                    var sin = Math.sin(rad);
+
+                    // 旋轉移動向量
+                    var rotatedDeltaX = (deltaX * cos + deltaY * sin) / scale;
+                    var rotatedDeltaY = (-deltaX * sin + deltaY * cos) / scale;
+
+                    offsetX = startOffsetX + rotatedDeltaX;
+                    offsetY = startOffsetY + rotatedDeltaY;
+
+                    drawImage();
+                    updateStatus();
+                }
+            });
+
+            // 鼠標放開事件
+            $(document).on('mouseup', function (e) {
+                if (isDrawingMode && isDrawing) {
+                    isDrawing = false;
+                    drawImage();
+                } else if (isDragging) {
+                    isDragging = false;
+                    updateStatus();
+                    if (isMouseOverCanvas) {
+                        $('#canvas').css('cursor', 'grab');
+                    } else {
+                        $('#canvas').css('cursor', 'default');
+                    }
+                }
+            });
+
+            // 縮放按鈕事件處理
+            $('#scaleUpBtn').click(function () {
+                var ratio = parseFloat($('#scaleRatio').val());
+                if (isNaN(ratio) || ratio <= 0) {
+                    alert('請輸入有效的縮放比例（正數）。');
+                    return;
+                }
+                saveState();
+                scale *= (1 + ratio);
+                if (scale > maxScale) scale = maxScale;
+                drawImage();
+                updateStatus();
+            });
+
+            $('#scaleDownBtn').click(function () {
+                var ratio = parseFloat($('#scaleRatio').val());
+                if (isNaN(ratio) || ratio <= 0 || ratio >= 1) {
+                    alert('請輸入有效的縮放比例（0 < 比例 < 1）。');
+                    return;
+                }
+                saveState();
+                scale *= (1 - ratio);
+                if (scale < minScale) scale = minScale;
+                drawImage();
+                updateStatus();
+            });
+
+            // 旋轉按鈕事件處理
+            $('#rotateCWBtn').click(function () {
+                var angle = parseFloat($('#rotateAngle').val());
+                if (isNaN(angle)) {
+                    alert('請輸入有效的旋轉角度。');
+                    return;
+                }
+                saveState();
+                rotation += angle;
+                rotation = rotation % 360;
+                drawImage();
+                updateStatus();
+            });
+
+            $('#rotateCCWBtn').click(function () {
+                var angle = parseFloat($('#rotateAngle').val());
+                if (isNaN(angle)) {
+                    alert('請輸入有效的旋轉角度。');
+                    return;
+                }
+                saveState();
+                rotation -= angle;
+                rotation = rotation % 360;
+                drawImage();
+                updateStatus();
+            });
+
+            // 重置縮放按鈕事件處理
+            $('#resetScaleBtn').click(function () {
+                saveState();
+                scale = initialState.scale;
+                drawImage();
+                updateStatus();
+            });
+
+            // 重置旋轉按鈕事件處理
+            $('#resetRotationBtn').click(function () {
+                saveState();
+                rotation = initialState.rotation;
+                drawImage();
+                updateStatus();
+            });
+
+            // 重置位置按鈕事件處理
+            $('#resetPositionBtn').click(function () {
+                saveState();
+                offsetX = initialState.offsetX;
+                offsetY = initialState.offsetY;
+                drawImage();
+                updateStatus();
+            });
+
+            // 重置全部按鈕事件處理（不重置 canvasRatio）
+            $('#resetBtn').click(function () {
+                saveState();
+                // 重置到初始狀態
+                scale = initialState.scale;
+                rotation = initialState.rotation;
+                offsetX = initialState.offsetX;
+                offsetY = initialState.offsetY;
+                backgroundColor = initialState.backgroundColor;
+                drawingPaths = [];
+                // 不重置 canvasRatio
+                // 更新勾選框狀態和背景顏色選取器
+                $('#transparentBgCheckbox').prop('checked', false);
+                $('#backgroundColor').prop('disabled', false).val(backgroundColor);
+                drawImage();
+                updateStatus();
+            });
+
+            // 設定背景顏色
+            $('#backgroundColor').change(function () {
+                if ($('#transparentBgCheckbox').is(':checked')) {
+                    // 如果使用透明背景，忽略顏色選取器的變化
+                    return;
+                }
+                saveState();
+                backgroundColor = $(this).val();
+                drawImage();
+                updateStatus();
+            });
+
+            // 設定為透明背景勾選框事件處理
+            $('#transparentBgCheckbox').change(function () {
+                if ($(this).is(':checked')) {
+                    saveState();
+                    backgroundColor = 'transparent';
+                    $('#backgroundColor').prop('disabled', true);
+                } else {
+                    saveState();
+                    backgroundColor = $('#backgroundColor').val();
+                    $('#backgroundColor').prop('disabled', false);
+                }
+                drawImage();
+                updateStatus();
+            });
+
+            // 撤銷按鈕事件處理
+            $('#undoBtn').click(function () {
+                if (undoStack.length === 0) return;
+                var currentState = {
+                    offsetX: offsetX,
+                    offsetY: offsetY,
+                    scale: scale,
+                    rotation: rotation,
+                    backgroundColor: backgroundColor,
+                    drawingPaths: JSON.parse(JSON.stringify(drawingPaths))
+                };
+                redoStack.push(currentState);
+                var prevState = undoStack.pop();
+                applyState(prevState);
+                updateUndoRedoButtons();
+            });
+
+            // 重做按鈕事件處理
+            $('#redoBtn').click(function () {
+                if (redoStack.length === 0) return;
+                var currentState = {
+                    offsetX: offsetX,
+                    offsetY: offsetY,
+                    scale: scale,
+                    rotation: rotation,
+                    backgroundColor: backgroundColor,
+                    drawingPaths: JSON.parse(JSON.stringify(drawingPaths))
+                };
+                undoStack.push(currentState);
+                var nextState = redoStack.pop();
+                applyState(nextState);
+                updateUndoRedoButtons();
+            });
+
+            // 下載當前圖片
+            $('#downloadBtn').click(function () {
+                if (currentIndex < 0) {
+                    alert("請上傳並選擇一張圖片！");
+                    return;
+                }
+                // 取得使用者指定的下載寬度，預設為 512px
+                var desiredWidth = parseInt($('#downloadWidth').val());
+                if (isNaN(desiredWidth) || desiredWidth <= 0) {
+                    alert('請輸入有效的下載寬度（正數）。');
+                    return;
+                }
+
+                saveCurrentImageState(); // 保存當前圖片的狀態
+
+                var imageObj = images[currentIndex];
+                var image = imageObj.img;
+                var state = imageObj.state;
+
+                processAndDownloadImage(image, state, desiredWidth, currentIndex);
+            });
+
+            // 批次下載所有圖片
+            $('#batchDownloadBtn').click(function () {
+                if (images.length === 0) {
+                    alert("請上傳圖片！");
+                    return;
+                }
+                // 取得使用者指定的下載寬度，預設為 512px
+                var desiredWidth = parseInt($('#downloadWidth').val());
+                if (isNaN(desiredWidth) || desiredWidth <= 0) {
+                    alert('請輸入有效的下載寬度（正數）。');
+                    return;
+                }
+
+                saveCurrentImageState(); // 保存當前圖片的狀態
+
+                // 處理多張圖片，並打包成 zip
+                var zip = new JSZip();
+                var processedCount = 0;
+
+                for (var i = 0; i < images.length; i++) {
+                    (function (imageObj, index) {
+                        processAndDownloadImage(imageObj.img, imageObj.state, desiredWidth, index, function (blob, fileName) {
+                            zip.file(fileName, blob);
+                            processedCount++;
+                            if (processedCount === images.length) {
+                                // 所有圖片都已處理完畢，生成 zip 檔案
+                                zip.generateAsync({
+                                    type: 'blob'
+                                }).then(function (content) {
+                                    saveAs(content, 'images.zip');
+                                });
+                            }
+                        });
+                    })(images[i], i);
+                }
+            });
+
+            // 處理並下載圖片的函數
+            function processAndDownloadImage(image, state, desiredWidth, index, callback) {
+                // 根據畫布比例計算下載高度
+                var ratioParts = canvasRatio.split(':');
+                var widthRatio = parseInt(ratioParts[0]);
+                var heightRatio = parseInt(ratioParts[1]);
+                var desiredHeight = Math.round(desiredWidth * heightRatio / widthRatio);
+
+                // 創建一個臨時畫布來繪製調整後的圖片
+                var tempCanvas = document.createElement('canvas');
+                tempCanvas.width = desiredWidth;
+                tempCanvas.height = desiredHeight;
+                var tempCtx = tempCanvas.getContext('2d');
+
+                // 填充背景色或保持透明
+                if (state.backgroundColor !== 'transparent') {
+                    tempCtx.fillStyle = state.backgroundColor;
+                    tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+                } else {
+                    tempCtx.clearRect(0, 0, tempCanvas.width, tempCanvas.height);
+                }
+
+                // 計算縮放比例
+                var scalingFactor = desiredWidth / canvas.width;
+
+                // 繪製圖片
+                tempCtx.save();
+                // 移動畫布原點到中心
+                tempCtx.translate(tempCanvas.width / 2, tempCanvas.height / 2);
+                // 縮放
+                tempCtx.scale(state.scale * scalingFactor, state.scale * scalingFactor);
+                // 旋轉（將度轉換為弧度）
+                tempCtx.rotate(state.rotation * Math.PI / 180);
+                // 繪製圖片，考慮位移，並縮放位移
+                tempCtx.drawImage(image, -image.width / 2 + state.offsetX, -image.height / 2 + state.offsetY);
+                tempCtx.restore();
+
+                // 繪製畫筆路徑
+                if (state.drawingPaths && state.drawingPaths.length > 0) {
+                    tempCtx.save();
+                    tempCtx.lineCap = 'round';
+                    tempCtx.lineJoin = 'round';
+                    for (var i = 0; i < state.drawingPaths.length; i++) {
+                        var path = state.drawingPaths[i];
+                        tempCtx.strokeStyle = path.color;
+                        tempCtx.lineWidth = path.size * scalingFactor;
+                        tempCtx.beginPath();
+                        var points = path.points;
+                        if (points.length > 0) {
+                            tempCtx.moveTo(points[0].x * scalingFactor, points[0].y * scalingFactor);
+                            for (var j = 1; j < points.length; j++) {
+                                tempCtx.lineTo(points[j].x * scalingFactor, points[j].y * scalingFactor);
+                            }
+                        }
+                        tempCtx.stroke();
+                    }
+                    tempCtx.restore();
+                }
+
+                // 將臨時畫布轉換為 Blob 並下載
+                tempCanvas.toBlob(function (blob) {
+                    var now = new Date();
+                    var timestamp = now.getFullYear().toString() +
+                        ('0' + (now.getMonth() + 1)).slice(-2) +
+                        ('0' + now.getDate()).slice(-2) +
+                        ('0' + now.getHours()).slice(-2) +
+                        ('0' + now.getMinutes()).slice(-2) +
+                        ('0' + now.getSeconds()).slice(-2);
+                    // 文件名對應縮圖的索引
+                    var fileName = "photo_" + (index + 1) + ".png";
+                    // var fileName = "photo_" + timestamp + "_" + (index + 1) + ".png";
+                    if (callback) {
+                        callback(blob, fileName);
+                    } else {
+                        // 單張圖片，直接下載
+                        var link = document.createElement('a');
+                        link.download = fileName;
+                        link.href = URL.createObjectURL(blob);
+                        link.click();
+                        // 釋放 URL 對象
+                        URL.revokeObjectURL(link.href);
+                    }
+                }, 'image/png');
+            }
+        });
+    </script>
+</body>
+
+</html>
