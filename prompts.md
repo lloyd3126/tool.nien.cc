@@ -1,5 +1,3 @@
-## prompt
-
 ### normal
 - [圖片臨摹](./prompt/normal/圖片臨摹)
 - [文章翻譯](./prompt/normal/文章翻譯)

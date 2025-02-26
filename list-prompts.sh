@@ -7,8 +7,8 @@ generate_markdown() {
     local target_dir=$1
     local base_dir=$(basename "$target_dir")
     
-    echo "## $base_dir"
-    echo ""
+    # echo "## $base_dir"
+    # echo ""
     
     # 遍歷主資料夾
     for main_dir in "$target_dir"/*/ ; do
