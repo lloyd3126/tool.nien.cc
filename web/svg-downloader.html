@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVG 轉換器</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .preview-container {
+            background-color: white;
+            border: 1px dashed #dee2e6;
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .preview-container.has-content {
+            border: 1px solid #28a745;
+        }
+
+        .preview-placeholder {
+            color: #6c757d;
+            text-align: center;
+        }
+
+        .preview-container svg {
+            max-width: 100%;
+            max-height: 300px;
+        }
+
+        .card {
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+
+        .bg-pattern {
+            background-image: linear-gradient(45deg, #f8f9fa 25%, transparent 25%),
+                linear-gradient(-45deg, #f8f9fa 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #f8f9fa 75%),
+                linear-gradient(-45deg, transparent 75%, #f8f9fa 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+        }
+
+        .size-badge {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container py-5">
+        <h1 class="text-center mb-4">SVG 轉換器</h1>
+        <p class="text-center text-muted mb-5">貼上 SVG 代碼，輕鬆下載為 PNG 和 SVG 檔案</p>
+
+        <div class="row">
+            <div class="col-lg-6">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        SVG 代碼
+                    </div>
+                    <div class="card-body">
+                        <textarea id="svgCode" class="form-control" rows="10" placeholder="在此貼上您的 SVG 代碼..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>預覽</span>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="toggleBackground">
+                            <label class="form-check-label" for="toggleBackground">顯示透明背景</label>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="previewContainer" class="preview-container">
+                            <div class="preview-placeholder">
+                                <p>SVG 預覽區域</p>
+                                <small>貼上 SVG 代碼後將顯示在此處</small>
+                            </div>
+                            <div class="size-badge" id="svgSize" style="display: none;">0 x 0</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        PNG 設定
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="pngWidth" class="form-label">寬度 (像素)</label>
+                            <input type="number" class="form-control" id="pngWidth" value="800" min="1">
+                        </div>
+                        <div class="mb-3">
+                            <label for="pngHeight" class="form-label">高度 (像素)</label>
+                            <input type="number" class="form-control" id="pngHeight" value="600" min="1">
+                        </div>
+                        <div class="mb-3">
+                            <label for="pngScale" class="form-label">縮放比例: <span id="scaleValue">1</span></label>
+                            <input type="range" class="form-range" id="pngScale" min="0.1" max="5" step="0.1" value="1">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="maintainAspectRatio" checked>
+                            <label class="form-check-label" for="maintainAspectRatio">
+                                保持原始比例
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card">
+                    <div class="card-header">
+                        下載選項
+                    </div>
+                    <div class="card-body">
+                        <div class="d-grid gap-3">
+                            <button id="downloadSvg" class="btn btn-primary" disabled>
+                                <i class="bi bi-download"></i> 下載 SVG 檔案
+                            </button>
+                            <button id="downloadPng" class="btn btn-success" disabled>
+                                <i class="bi bi-download"></i> 下載 PNG 檔案
+                            </button>
+                            <div class="alert alert-info" role="alert">
+                                <small>提示: PNG 檔案將根據上方設定的尺寸生成</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        $(document).ready(function () {
+            let originalWidth = 0;
+            let originalHeight = 0;
+            let aspectRatio = 1;
+
+            // 監聽 SVG 代碼輸入
+            $('#svgCode').on('input', function () {
+                const svgCode = $(this).val().trim();
+
+                if (svgCode) {
+                    // 清空預覽區域
+                    $('#previewContainer').empty().addClass('has-content');
+
+                    try {
+                        // 插入 SVG
+                        $('#previewContainer').html(svgCode);
+
+                        // 獲取 SVG 元素
+                        const svgElement = $('#previewContainer svg');
+
+                        if (svgElement.length) {
+                            // 啟用下載按鈕
+                            $('#downloadSvg, #downloadPng').prop('disabled', false);
+
+                            // 獲取原始尺寸
+                            const svgWidth = svgElement.attr('width') || svgElement[0].viewBox.baseVal.width || 0;
+                            const svgHeight = svgElement.attr('height') || svgElement[0].viewBox.baseVal.height || 0;
+
+                            originalWidth = parseFloat(svgWidth);
+                            originalHeight = parseFloat(svgHeight);
+
+                            if (originalWidth && originalHeight) {
+                                aspectRatio = originalWidth / originalHeight;
+
+                                // 更新 PNG 尺寸輸入框
+                                $('#pngWidth').val(Math.round(originalWidth));
+                                $('#pngHeight').val(Math.round(originalHeight));
+
+                                // 顯示尺寸信息
+                                $('#svgSize').text(`${Math.round(originalWidth)} × ${Math.round(originalHeight)}`).show();
+                            } else {
+                                $('#svgSize').hide();
+                            }
+                        }
+                    } catch (error) {
+                        $('#previewContainer').html(`
+                            <div class="alert alert-danger">
+                                SVG 解析錯誤: ${error.message}
+                            </div>
+                        `);
+                        $('#downloadSvg, #downloadPng').prop('disabled', true);
+                    }
+                } else {
+                    // 恢復預設預覽區域
+                    $('#previewContainer').removeClass('has-content').html(`
+                        <div class="preview-placeholder">
+                            <p>SVG 預覽區域</p>
+                            <small>貼上 SVG 代碼後將顯示在此處</small>
+                        </div>
+                    `);
+                    $('#downloadSvg, #downloadPng').prop('disabled', true);
+                    $('#svgSize').hide();
+                }
+            });
+
+            // 切換背景
+            $('#toggleBackground').change(function () {
+                if ($(this).is(':checked')) {
+                    $('#previewContainer').addClass('bg-pattern');
+                } else {
+                    $('#previewContainer').removeClass('bg-pattern');
+                }
+            });
+
+            // 保持比例
+            $('#pngWidth').on('input', function () {
+                if ($('#maintainAspectRatio').is(':checked') && aspectRatio) {
+                    const width = parseFloat($(this).val());
+                    $('#pngHeight').val(Math.round(width / aspectRatio));
+                }
+            });
+
+            $('#pngHeight').on('input', function () {
+                if ($('#maintainAspectRatio').is(':checked') && aspectRatio) {
+                    const height = parseFloat($(this).val());
+                    $('#pngWidth').val(Math.round(height * aspectRatio));
+                }
+            });
+
+            // 縮放比例
+            $('#pngScale').on('input', function () {
+                const scale = parseFloat($(this).val());
+                $('#scaleValue').text(scale.toFixed(1));
+
+                if (originalWidth && originalHeight) {
+                    $('#pngWidth').val(Math.round(originalWidth * scale));
+                    $('#pngHeight').val(Math.round(originalHeight * scale));
+                }
+            });
+
+            // 下載 SVG
+            $('#downloadSvg').click(function () {
+                const svgCode = $('#svgCode').val();
+                if (!svgCode) return;
+
+                const blob = new Blob([svgCode], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'download.svg';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+
+            // 下載 PNG
+            $('#downloadPng').click(function () {
+                const svgCode = $('#svgCode').val();
+                if (!svgCode) return;
+
+                const width = parseInt($('#pngWidth').val());
+                const height = parseInt($('#pngHeight').val());
+
+                // 創建臨時 SVG
+                const tempSvg = document.createElement('svg');
+                tempSvg.innerHTML = svgCode;
+                const svgElement = tempSvg.firstElementChild;
+
+                // 創建 Canvas
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+
+                // 繪製白色背景 (如果需要)
+                if (!$('#toggleBackground').is(':checked')) {
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, width, height);
+                }
+
+                // 將 SVG 轉為圖片
+                const img = new Image();
+                const svgBlob = new Blob([svgCode], { type: 'image/svg+xml' });
+                const url = URL.createObjectURL(svgBlob);
+
+                img.onload = function () {
+                    ctx.drawImage(img, 0, 0, width, height);
+                    URL.revokeObjectURL(url);
+
+                    // 下載 PNG
+                    const pngUrl = canvas.toDataURL('image/png');
+                    const a = document.createElement('a');
+                    a.href = pngUrl;
+                    a.download = 'download.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                };
+
+                img.src = url;
+            });
+        });
+    </script>
+</body>
+
+</html>
