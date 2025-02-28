@@ -5,3 +5,4 @@
 - [SVG 下載工具](./web/svg-downloader.html)
 - [文字統計工具](./web/word-couter.html)
 - [圖片裁剪工具](./web/image-cropping-tool.html)
+- [密碼生成器](./web/password-generator.html)
