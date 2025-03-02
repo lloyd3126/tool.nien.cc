@@ -1,10 +1,11 @@
 ### normal
-- [圖片臨摹](./prompt/normal/圖片臨摹)
-- [文章翻譯](./prompt/normal/文章翻譯)
+- [日常_圖片臨摹](./prompt/normal/日常_圖片臨摹)
+- [日常_文章翻譯](./prompt/normal/日常_文章翻譯)
 
 ### reasoning
-- [文章翻譯](./prompt/reasoning/文章翻譯)
-- [文章配圖](./prompt/reasoning/文章配圖)
+- [學習_閱讀測驗](./prompt/reasoning/學習_閱讀測驗)
+- [日常_文章翻譯](./prompt/reasoning/日常_文章翻譯)
+- [日常_文章配圖](./prompt/reasoning/日常_文章配圖)
 
 ### system
 - [告訴我怎麼做](./prompt/system/告訴我怎麼做)
