@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>提示詞</title>
+    <!-- 引入 Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <style>
+        /* 讓整個頁面背景柔和 */
+        body {
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Arial, sans-serif;
+        }
+
+        /* 卡片區塊 */
+        .card-wrapper {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+
+        /* 文字顯示區域 */
+        #textDisplayArea {
+            width: 100%;
+            height: 50vh;
+            margin-top: 1.5rem;
+            margin-bottom: 1.5rem;
+            padding: 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.25rem;
+            font-family: monospace;
+            font-size: 0.9rem;
+            background-color: #e9ecef;
+            resize: vertical;
+            white-space: pre-wrap;
+            overflow-y: auto;
+        }
+
+        .copy-button {
+            width: 100%;
+            transition: all 0.3s ease;
+        }
+
+        .btn-success-custom {
+            background-color: #198754;
+            border-color: #198754;
+            color: white;
+        }
+
+        .status-message {
+            margin-top: 1rem;
+            min-height: 1.5rem;
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+
+        .error-message {
+            color: #dc3545;
+        }
+
+        h1 {
+            margin-bottom: 10px;
+        }
+
+        h2 {
+            font-weight: 400;
+            color: #aaa;
+        }
+
+        h1,
+        h2 {
+            letter-spacing: 2px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card-wrapper">
+        <!-- 主要標題 -->
+        <h1 class="fs-3">提示詞</h1>
+        <h2 class="fs-6">- 陳重年 - </h2>
+
+        <!-- 文字顯示區域 -->
+        <textarea id="textDisplayArea" class="form-control" readonly>載入中...</textarea>
+
+        <!-- 複製按鈕 -->
+        <button id="copyButton" class="btn btn-primary btn-lg copy-button" disabled>
+            載入中...
+        </button>
+
+        <!-- 狀態/錯誤訊息顯示區域 -->
+        <!-- <div id="statusMessage" class="status-message"></div> -->
+    </div>
+
+    <!-- 引入 jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- 引入 Bootstrap JS Bundle (包含 Popper) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+    <script>
+        $(document).ready(function () {
+            // ------------------- 設定區 -------------------
+            const sourcefolder = '做網頁的工讀生';
+            const textSourceUrl = 'https://tool.nien.cc/prompt/system/' + sourcefolder + '/data.txt';
+            const originalButtonText = '一鍵複製提示詞';
+            const successButtonText = '成功複製提示詞';
+            const successDuration = 2000; // 成功提示顯示時間 (毫秒)
+            // ---------------------------------------------
+
+            let textToCopy = '';
+            const $copyButton = $('#copyButton');
+            const $statusMessage = $('#statusMessage');
+            const $textDisplayArea = $('#textDisplayArea');
+            const $h1 = $('h1');
+            const $title = $('title');
+
+
+            // 載入文字內容
+            $.ajax({
+                url: textSourceUrl,
+                method: 'GET',
+                dataType: 'text',
+                cache: false,
+                success: function (data) {
+                    textToCopy = data;
+                    $textDisplayArea.val(textToCopy);
+                    $h1.text(sourcefolder);
+                    $title.text(sourcefolder + '｜陳重年的提示詞');
+                    $copyButton.prop('disabled', false).text(originalButtonText);
+                    $statusMessage.text('提示詞已載入並顯示');
+                },
+                error: function (jqXHR, textStatus, errorThrown) {
+                    const errorMsg = '無法載入提示詞，請檢查網址或網路連線。';
+                    $copyButton.text('載入失敗').addClass('btn-danger').removeClass('btn-primary');
+                    $statusMessage.text(errorMsg).addClass('error-message');
+                    $textDisplayArea.val(errorMsg);
+                }
+            });
+
+            // 監聽按鈕點擊事件
+            $copyButton.on('click', function () {
+                if (!textToCopy) {
+                    $statusMessage.text('錯誤：沒有可複製的內容。').addClass('error-message');
+                    return;
+                }
+
+                navigator.clipboard.writeText(textToCopy).then(function () {
+                    const originalClasses = $copyButton.attr('class');
+                    $copyButton.removeClass('btn-primary btn-danger').addClass('btn-success-custom')
+                        .text(successButtonText)
+                        .prop('disabled', true);
+                    $statusMessage.text('已成功複製').removeClass('error-message');
+
+                    setTimeout(function () {
+                        $copyButton.attr('class', originalClasses.replace('btn-success-custom', 'btn-primary'))
+                            .text(originalButtonText)
+                            .prop('disabled', false);
+                        $statusMessage.text('提示詞已載入並顯示');
+                    }, successDuration);
+                }).catch(function (err) {
+                    $statusMessage.text('複製失敗，您的瀏覽器可能不支援或未授予權限。').addClass('error-message');
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>
