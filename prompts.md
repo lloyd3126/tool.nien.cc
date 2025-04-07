@@ -16,3 +16,4 @@
 - [檢驗是否學會](./prompt/system/檢驗是否學會)
 - [淺顯易懂的說](./prompt/system/淺顯易懂的說)
 - [網頁工讀生](https://tool.nien.cc/prompt/system/網頁工讀生/index.html)
+- [配圖工讀生](https://tool.nien.cc/prompt/system/配圖工讀生/index.html)
