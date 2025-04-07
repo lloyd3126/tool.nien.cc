@@ -6,4 +6,4 @@
 - [文字統計工具](./web/word-couter.html)
 - [圖片裁剪工具](./web/image-cropping-tool.html)
 - [密碼生成器](./web/password-generator.html)
-- [班級抽籤工具](./web/drawing-tool.html)
+- 抽籤工具 [v1](./web/drawing-tool/drawing-tool-1.html) [v2](./web/drawing-tool/drawing-tool-2.html)
