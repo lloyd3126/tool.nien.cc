@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>課堂點名小幫手</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #343a40;
+        }
+
+        textarea,
+        input[type="number"] {
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: 1px solid #ced4da;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        #result-area {
+            min-height: 100px;
+            border: 1px dashed #ced4da;
+            border-radius: 5px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+            font-size: 1.2em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            /* 讓抽出的名字垂直排列 */
+        }
+
+        #result-area.highlight {
+            background-color: #ffeeba;
+            border-color: #ffc107;
+        }
+
+        .student-name {
+            font-size: 2em;
+            font-weight: bold;
+            color: #28a745;
+            /* Green color for selected name */
+            display: block;
+            /* 確保每個名字佔據一行 */
+            margin-bottom: 5px;
+            /* 名字之間增加一點間距 */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>課堂點名小幫手</h1>
+        <p class="text-center">請在下方輸入學生姓名，每行一個姓名。</p>
+        <div class="mb-3">
+            <textarea class="form-control" id="student-list" rows="5" placeholder="請輸入學生姓名，每行一個"></textarea>
+        </div>
+        <div class="mb-3">
+            <label for="pick-number" class="form-label">抽點人數：</label>
+            <input type="number" class="form-control" id="pick-number" value="1" min="1">
+        </div>
+        <div class="d-grid gap-2">
+            <button class="btn btn-primary" id="start-button" type="button">開始抽點</button>
+        </div>
+
+        <div id="result-area" class="">
+            等待抽點...
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"
+        integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g=="
+        crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
+        crossorigin="anonymous"></script>
+
+    <script>
+        $(document).ready(function () {
+            $("#start-button").click(function () {
+                var studentListText = $("#student-list").val();
+                var studentNames = studentListText.split('\n').filter(name => name.trim() !== ""); // Split by newline and remove empty names
+                var pickNumber = parseInt($("#pick-number").val());
+
+                if (studentNames.length === 0) {
+                    alert("請輸入學生名單！");
+                    return;
+                }
+
+                if (pickNumber > studentNames.length) {
+                    alert("抽點人數不能超過學生總數！");
+                    return;
+                }
+
+                $("#result-area").removeClass("highlight").html("抽點中..."); // Reset result area and indicate loading
+
+                // Animation effect before showing result
+                let animationInterval;
+                let animationCounter = 0;
+                const animationDuration = 2000; // 2 seconds animation
+                const startTime = Date.now();
+
+                animationInterval = setInterval(function () {
+                    const elapsedTime = Date.now() - startTime;
+                    if (elapsedTime >= animationDuration) {
+                        clearInterval(animationInterval);
+                        pickRandomStudents(studentNames, pickNumber); // Call function to pick and display students after animation
+                        return;
+                    }
+
+                    let randomIndex = Math.floor(Math.random() * studentNames.length);
+                    $("#result-area").html(studentNames[randomIndex]); // Display random name during animation
+
+                }, 100); // Change name every 100ms
+
+
+                function pickRandomStudents(names, numberToPick) {
+                    let selectedStudents = [];
+                    let availableNames = [...names]; // Create a copy to avoid modifying original array
+
+                    for (let i = 0; i < numberToPick; i++) {
+                        if (availableNames.length === 0) break; // No more students to pick from
+                        let randomIndex = Math.floor(Math.random() * availableNames.length);
+                        selectedStudents.push(availableNames[randomIndex]);
+                        availableNames.splice(randomIndex, 1); // Remove picked student to avoid duplicates in one draw
+                    }
+
+                    displayResult(selectedStudents);
+                }
+
+
+                function displayResult(selectedStudents) {
+                    $("#result-area").addClass("highlight");
+                    let resultHTML = "";
+                    if (selectedStudents.length > 0) {
+                        // 修改這裡，讓每個名字都換行顯示
+                        resultHTML = selectedStudents.map(student => `<div><span class="student-name">${student}</span></div>`).join("");
+                    } else {
+                        resultHTML = "沒有學生被選中 (可能學生名單為空)";
+                    }
+                    $("#result-area").html(resultHTML);
+                }
+
+
+            });
+        });
+    </script>
+</body>
+
+</html>
