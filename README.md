@@ -21,6 +21,7 @@
 - [翻譯工讀生](https://tool.nien.cc/prompt/system/翻譯工讀生/index.html)
 - [配圖工讀生](https://tool.nien.cc/prompt/system/配圖工讀生/index.html)
 - [臨摹工讀生](https://tool.nien.cc/prompt/system/臨摹工讀生/index.html)
+- [幹話工讀生](https://tool.nien.cc/prompt/system/幹話工讀生/index.html)
 - [告訴我怎麼做](./prompt/system/告訴我怎麼做)
 - [幫我打逐字稿](./prompt/system/幫我打逐字稿)
 - [檢驗是否學會](./prompt/system/檢驗是否學會)
