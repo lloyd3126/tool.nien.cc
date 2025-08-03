@@ -106,10 +106,15 @@
             grid-template-columns: auto 1fr;
             grid-template-rows: auto 1fr;
             background-color: #1f2937;
+            width: 100%;
+            max-width: 100%;
+            overflow: auto;
         }
 
         canvas {
             display: block;
+            max-width: 100%;
+            height: auto;
         }
     </style>
 </head>
@@ -266,6 +271,13 @@
             }
         });
 
+        // Add window resize listener for responsive scaling
+        window.addEventListener('resize', () => {
+            if (originalImage) {
+                requestAnimationFrame(drawAll);
+            }
+        });
+
         function setupCanvases() {
             gridContainer.innerHTML = '';
 
@@ -293,8 +305,13 @@
             const canvasX = (event.clientX - rect.left) * scaleX;
             const canvasY = (event.clientY - rect.top) * scaleY;
 
-            const col = Math.floor(canvasX / currentTileSize);
-            const row = Math.floor(canvasY / currentTileSize);
+            // Calculate the actual scale being used
+            const containerWidth = gridContainer.clientWidth - RULER_SIZE;
+            const displayScale = containerWidth / originalImage.width;
+            const scaledTileSize = currentTileSize * displayScale;
+
+            const col = Math.floor(canvasX / scaledTileSize);
+            const row = Math.floor(canvasY / scaledTileSize);
 
             selectedCell = { col, row };
             infoText.innerHTML = `選取位置: <span class="text-indigo-300 font-semibold">行 ${row + 1}, 列 ${col + 1}</span>`;
@@ -392,39 +409,46 @@
         function drawAll() {
             if (!originalImage) return;
 
+            const containerWidth = gridContainer.clientWidth - RULER_SIZE;
             const imgWidth = originalImage.width;
             const imgHeight = originalImage.height;
 
-            mosaicCanvas.width = imgWidth;
-            mosaicCanvas.height = imgHeight;
-            topRulerCanvas.width = imgWidth;
+            // Calculate scale to fit width
+            const scale = containerWidth / imgWidth;
+            const scaledWidth = imgWidth * scale;
+            const scaledHeight = imgHeight * scale;
+
+            mosaicCanvas.width = scaledWidth;
+            mosaicCanvas.height = scaledHeight;
+            topRulerCanvas.width = scaledWidth;
             topRulerCanvas.height = RULER_SIZE;
             leftRulerCanvas.width = RULER_SIZE;
-            leftRulerCanvas.height = imgHeight;
+            leftRulerCanvas.height = scaledHeight;
 
-            drawMosaic();
-            drawRulers();
-            drawHighlight();
+            drawMosaic(scale);
+            drawRulers(scale);
+            drawHighlight(scale);
         }
 
-        function drawMosaic() {
+        function drawMosaic(scale = 1) {
             const ctx = mosaicCanvas.getContext('2d');
             const imgWidth = mosaicCanvas.width;
             const imgHeight = mosaicCanvas.height;
+            const scaledTileSize = currentTileSize * scale;
 
             // Step 1: Draw all cells and their fine grid
-            for (let y = 0; y < imgHeight; y += currentTileSize) {
-                for (let x = 0; x < imgWidth; x += currentTileSize) {
-                    const col = Math.floor(x / currentTileSize);
-                    const row = Math.floor(y / currentTileSize);
+            for (let y = 0; y < imgHeight; y += scaledTileSize) {
+                for (let x = 0; x < imgWidth; x += scaledTileSize) {
+                    const col = Math.floor(x / scaledTileSize);
+                    const row = Math.floor(y / scaledTileSize);
                     const key = `${col},${row}`;
 
                     ctx.fillStyle = customColors[key] || getOriginalCellColorAsHex(col, row);
-                    ctx.fillRect(x, y, currentTileSize, currentTileSize);
+                    ctx.fillRect(x, y, scaledTileSize, scaledTileSize);
 
                     ctx.strokeStyle = '#000';
                     ctx.lineWidth = 1;
-                    ctx.strokeRect(x + 0.5, y + 0.5, currentTileSize, currentTileSize);
+                    ctx.strokeRect(x + 0.5, y + 0.5, scaledTileSize, scaledTileSize);
                 }
             }
 
@@ -439,16 +463,16 @@
             ctx.lineWidth = 2; // Make it clearly visible
 
             // Draw major vertical lines
-            for (let i = labelInterval; i * currentTileSize < imgWidth; i += labelInterval) {
-                const x = i * currentTileSize;
+            for (let i = labelInterval; i * scaledTileSize < imgWidth; i += labelInterval) {
+                const x = i * scaledTileSize;
                 ctx.beginPath();
                 ctx.moveTo(x - 0.5, 0);
                 ctx.lineTo(x - 0.5, imgHeight);
                 ctx.stroke();
             }
             // Draw major horizontal lines
-            for (let i = labelInterval; i * currentTileSize < imgHeight; i += labelInterval) {
-                const y = i * currentTileSize;
+            for (let i = labelInterval; i * scaledTileSize < imgHeight; i += labelInterval) {
+                const y = i * scaledTileSize;
                 ctx.beginPath();
                 ctx.moveTo(0, y - 0.5);
                 ctx.lineTo(imgWidth, y - 0.5);
@@ -468,11 +492,12 @@
             return "#" + ("000000" + ((d[0] << 16) | (d[1] << 8) | d[2]).toString(16)).slice(-6);
         }
 
-        function drawRulers() {
+        function drawRulers(scale = 1) {
             const topCtx = topRulerCanvas.getContext('2d');
             const leftCtx = leftRulerCanvas.getContext('2d');
             const imgWidth = mosaicCanvas.width;
             const imgHeight = mosaicCanvas.height;
+            const scaledTileSize = currentTileSize * scale;
 
             topCtx.clearRect(0, 0, topRulerCanvas.width, topRulerCanvas.height);
             leftCtx.clearRect(0, 0, leftRulerCanvas.width, leftRulerCanvas.height);
@@ -490,9 +515,9 @@
             topCtx.textBaseline = 'middle';
             topCtx.strokeStyle = tickColor;
             topCtx.lineWidth = 1;
-            for (let x = 0; x < imgWidth; x += currentTileSize) {
-                const col = Math.floor(x / currentTileSize) + 1;
-                const xPos = x + currentTileSize / 2;
+            for (let x = 0; x < imgWidth; x += scaledTileSize) {
+                const col = Math.floor(x / scaledTileSize) + 1;
+                const xPos = x + scaledTileSize / 2;
                 topCtx.beginPath();
                 topCtx.moveTo(x + 0.5, RULER_SIZE);
                 const tickHeight = ((col - 1) % labelInterval === 0) ? 10 : 5;
@@ -509,9 +534,9 @@
             leftCtx.textBaseline = 'middle';
             leftCtx.strokeStyle = tickColor;
             leftCtx.lineWidth = 1;
-            for (let y = 0; y < imgHeight; y += currentTileSize) {
-                const row = Math.floor(y / currentTileSize) + 1;
-                const yPos = y + currentTileSize / 2;
+            for (let y = 0; y < imgHeight; y += scaledTileSize) {
+                const row = Math.floor(y / scaledTileSize) + 1;
+                const yPos = y + scaledTileSize / 2;
                 leftCtx.beginPath();
                 leftCtx.moveTo(RULER_SIZE, y + 0.5);
                 const tickWidth = ((row - 1) % labelInterval === 0) ? 10 : 5;
@@ -524,15 +549,16 @@
             }
         }
 
-        function drawHighlight() {
+        function drawHighlight(scale = 1) {
             if (!selectedCell) return;
             const ctx = mosaicCanvas.getContext('2d');
-            const x = selectedCell.col * currentTileSize;
-            const y = selectedCell.row * currentTileSize;
+            const scaledTileSize = currentTileSize * scale;
+            const x = selectedCell.col * scaledTileSize;
+            const y = selectedCell.row * scaledTileSize;
 
             ctx.strokeStyle = '#facc15'; // Yellow-400
             ctx.lineWidth = 4;
-            ctx.strokeRect(x + 2, y + 2, currentTileSize - 4, currentTileSize - 4);
+            ctx.strokeRect(x + 2, y + 2, scaledTileSize - 4, scaledTileSize - 4);
         }
 
     </script>
