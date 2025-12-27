@@ -198,10 +198,10 @@
                     <label class="text-[10px] uppercase font-bold text-slate-400 tracking-widest block mb-3">尺寸 (寬 x
                         高)</label>
                     <div class="flex gap-3">
-                        <input type="number" id="colsInput" value="20" min="5" max="100"
+                        <input type="number" id="colsInput" value="8" min="5" max="100"
                             class="flex-1 border-b border-slate-200 py-2 text-base outline-none focus:border-black transition-colors"
                             placeholder="寬">
-                        <input type="number" id="rowsInput" value="25" min="5" max="100"
+                        <input type="number" id="rowsInput" value="10" min="5" max="100"
                             class="flex-1 border-b border-slate-200 py-2 text-base outline-none focus:border-black transition-colors"
                             placeholder="高">
                     </div>
@@ -209,7 +209,7 @@
                 <div>
                     <label class="text-[10px] uppercase font-bold text-slate-400 tracking-widest block mb-3">格子大小
                         (px)</label>
-                    <input type="number" id="cellSizeInput" value="20" min="5" max="50"
+                    <input type="number" id="cellSizeInput" value="40" min="5" max="50"
                         class="w-full border-b border-slate-200 py-2 text-base outline-none focus:border-black transition-colors">
                 </div>
 
@@ -272,6 +272,33 @@
         let solutionPath = [];
         let showSolutionInUI = false;
 
+        // ========== 圖片快取系統 ==========
+        const imageCache = {};
+        const START_IMG_URL = 'https://cdn.nien.cc/posts/20251227/start.webp';
+        const END_IMG_URL = 'https://cdn.nien.cc/posts/20251227/end.webp';
+
+        function loadImage(src) {
+            return new Promise((resolve) => {
+                if (imageCache[src]) {
+                    resolve(imageCache[src]);
+                    return;
+                }
+                const img = new Image();
+                img.crossOrigin = 'anonymous';
+                img.onload = () => {
+                    imageCache[src] = img;
+                    resolve(img);
+                };
+                img.onerror = () => {
+                    // 如果圖片載入失敗，使用黑點作為備用
+                    imageCache[src] = null;
+                    console.warn(`Failed to load image: ${src}`);
+                    resolve(null);
+                };
+                img.src = src;
+            });
+        }
+
         // ========== Cell 類別 ==========
         class Cell {
             constructor(r, c) {
@@ -318,11 +345,32 @@
             }
         }
 
+        // ========== 繪製圖片函數 ==========
+        function drawImage(tCtx, src, r, c, size) {
+            const x = c * size;
+            const y = r * size;
+            const img = imageCache[src];
+
+            if (img) {
+                // 在格子中心繪製圖片，縮放至格子大小的 80%
+                const imgSize = size * 0.8;
+                const offsetX = (size - imgSize) / 2;
+                const offsetY = (size - imgSize) / 2;
+                tCtx.drawImage(img, x + offsetX, y + offsetY, imgSize, imgSize);
+            } else {
+                // 備用：繪製黑點
+                tCtx.fillStyle = "#000";
+                tCtx.beginPath();
+                tCtx.arc(x + size / 2, y + size / 2, size / 5, 0, Math.PI * 2);
+                tCtx.fill();
+            }
+        }
+
         // ========== 迷宮生成與渲染 ==========
         function setup() {
-            rows = parseInt(rowsInput.value) || 25;
-            cols = parseInt(colsInput.value) || 20;
-            cellSize = parseInt(cellSizeInput.value) || 20;
+            rows = parseInt(rowsInput.value) || 10;
+            cols = parseInt(colsInput.value) || 8;
+            cellSize = parseInt(cellSizeInput.value) || 40;
 
             // 設置所有 canvas 大小
             [canvas, printCanvasPuzzle, printCanvasSolution].forEach(c => {
@@ -363,9 +411,9 @@
             tCtx.lineWidth = 3;
             tCtx.strokeRect(0, 0, targetCanvas.width, targetCanvas.height);
 
-            // 起點和終點
-            drawDot(tCtx, 0, 0, "#000", size);
-            drawDot(tCtx, rows - 1, cols - 1, "#000", size);
+            // 起點和終點 (使用圖片)
+            drawImage(tCtx, START_IMG_URL, 0, 0, size);
+            drawImage(tCtx, END_IMG_URL, rows - 1, cols - 1, size);
 
             // 繪製解答路徑
             if (withPath && solutionPath.length > 0) {
@@ -385,13 +433,6 @@
                 }
                 tCtx.stroke();
             }
-        }
-
-        function drawDot(tCtx, r, c, color, size) {
-            tCtx.fillStyle = color;
-            tCtx.beginPath();
-            tCtx.arc(c * size + size / 2, r * size + size / 2, size / 5, 0, Math.PI * 2);
-            tCtx.fill();
         }
 
         // ========== 迷宮生成算法 (DFS) ==========
@@ -539,8 +580,11 @@
 
         // ========== 初始化 ==========
         window.addEventListener('load', () => {
-            generateMazeSync();
-            lucide.createIcons();
+            // 預加載圖片，然後生成迷宮
+            Promise.all([loadImage(START_IMG_URL), loadImage(END_IMG_URL)]).then(() => {
+                generateMazeSync();
+                lucide.createIcons();
+            });
         });
 
         // 頁面卸載清理
