@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>極簡迷宮工坊</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        canvas {
+            image-rendering: crisp-edges;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .icon-btn {
+            padding: 0.75rem;
+            border-radius: 9999px;
+            color: #94a3b8;
+            border: none;
+            background: none;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .icon-btn:hover {
+            color: #000;
+            background-color: #f1f5f9;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.9);
+        }
+
+        .icon-btn.text-black {
+            color: #000;
+        }
+
+        /* ========== MODAL 樣式 ========== */
+        #settingsModal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            padding: 1rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 300ms ease;
+        }
+
+        #settingsModal.active {
+            display: flex;
+            pointer-events: auto;
+            opacity: 1;
+        }
+
+        #settingsModal.active>.modal-content {
+            pointer-events: auto;
+            animation: modalScaleIn 300ms ease;
+        }
+
+        @keyframes modalScaleIn {
+            from {
+                transform: scale(0.95);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .modal-content {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 20rem;
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            pointer-events: auto;
+        }
+
+        /* ========== PRINT 樣式 ========== */
+        @media print {
+            @page {
+                size: A4;
+                margin: 0;
+            }
+
+            body {
+                background: white !important;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            #printArea {
+                display: block !important;
+                width: 100%;
+            }
+
+            .print-page {
+                width: 210mm;
+                height: 297mm;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                page-break-after: always;
+                break-after: page;
+                padding: 0;
+                box-sizing: border-box;
+            }
+
+            .print-page h2 {
+                display: none;
+            }
+
+            canvas {
+                width: 95vw !important;
+                height: 95vh !important;
+                max-width: 199.5mm !important;
+                max-height: 282.15mm !important;
+                border: 2px solid black;
+            }
+        }
+
+        /* ========== 響應式設計 ========== */
+        @media (max-width: 640px) {
+            .modal-content {
+                max-width: 90%;
+            }
+        }
+    </style>
+</head>
+
+<body class="flex flex-col min-h-screen overflow-x-hidden">
+
+    <!-- 頂部極簡控制列 -->
+    <header
+        class="no-print h-16 flex items-center justify-between px-6 border-b border-slate-50 sticky top-0 bg-white/80 backdrop-blur-md z-40">
+        <div class="flex items-center gap-2">
+            <button id="generateBtn" class="icon-btn" title="重新生成">
+                <i data-lucide="refresh-cw" class="w-5 h-5"></i>
+            </button>
+            <button id="toggleSolveBtn" class="icon-btn" title="顯示/隱藏解答">
+                <i data-lucide="eye" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button id="printBtn" class="icon-btn" title="列印為 A4">
+                <i data-lucide="printer" class="w-5 h-5"></i>
+            </button>
+            <button id="settingsToggle" class="icon-btn" title="設置">
+                <i data-lucide="sliders-horizontal" class="w-5 h-5"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- 設定 Modal -->
+    <div id="settingsModal" class="no-print">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h4 class="text-lg font-semibold text-slate-800">迷宮參數</h4>
+                <button id="closeModal"
+                    class="text-slate-400 hover:text-black hover:bg-slate-100 p-1 rounded-full transition-colors">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-6">
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-slate-400 tracking-widest block mb-3">尺寸 (寬 x
+                        高)</label>
+                    <div class="flex gap-3">
+                        <input type="number" id="colsInput" value="20" min="5" max="100"
+                            class="flex-1 border-b border-slate-200 py-2 text-base outline-none focus:border-black transition-colors"
+                            placeholder="寬">
+                        <input type="number" id="rowsInput" value="25" min="5" max="100"
+                            class="flex-1 border-b border-slate-200 py-2 text-base outline-none focus:border-black transition-colors"
+                            placeholder="高">
+                    </div>
+                </div>
+                <div>
+                    <label class="text-[10px] uppercase font-bold text-slate-400 tracking-widest block mb-3">格子大小
+                        (px)</label>
+                    <input type="number" id="cellSizeInput" value="20" min="5" max="50"
+                        class="w-full border-b border-slate-200 py-2 text-base outline-none focus:border-black transition-colors">
+                </div>
+
+                <div class="flex flex-col gap-2 pt-4">
+                    <button id="applyBtn"
+                        class="w-full py-4 bg-black text-white text-sm font-semibold rounded-2xl hover:bg-slate-800 transition-all active:scale-95">
+                        應用並重新生成
+                    </button>
+                    <button id="cancelBtn"
+                        class="w-full py-3 text-slate-400 text-sm hover:text-slate-600 transition-colors">
+                        取消
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 下方迷宮顯示區域 -->
+    <main class="flex-1 flex flex-col items-center justify-center p-4 md:p-12 no-print">
+        <div id="uiCanvasWrapper" class="relative bg-white border border-black p-1 shadow-sm">
+            <canvas id="mazeCanvas"></canvas>
+        </div>
+    </main>
+
+    <!-- 列印專用的隱藏結構 -->
+    <div id="printArea" class="hidden">
+        <div class="print-page">
+            <h2>MAZE CHALLENGE</h2>
+            <canvas id="printCanvasPuzzle"></canvas>
+        </div>
+        <div class="print-page">
+            <h2>MAZE SOLUTION</h2>
+            <canvas id="printCanvasSolution"></canvas>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // ========== DOM 元素 ==========
+        const canvas = document.getElementById('mazeCanvas');
+        const printCanvasPuzzle = document.getElementById('printCanvasPuzzle');
+        const printCanvasSolution = document.getElementById('printCanvasSolution');
+        const settingsModal = document.getElementById('settingsModal');
+        const settingsToggle = document.getElementById('settingsToggle');
+        const closeModal = document.getElementById('closeModal');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const applyBtn = document.getElementById('applyBtn');
+
+        const colsInput = document.getElementById('colsInput');
+        const rowsInput = document.getElementById('rowsInput');
+        const cellSizeInput = document.getElementById('cellSizeInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const toggleSolveBtn = document.getElementById('toggleSolveBtn');
+        const printBtn = document.getElementById('printBtn');
+
+        // ========== 全局變數 ==========
+        let grid = [];
+        let rows, cols, cellSize;
+        let solutionPath = [];
+        let showSolutionInUI = false;
+
+        // ========== Cell 類別 ==========
+        class Cell {
+            constructor(r, c) {
+                this.r = r;
+                this.c = c;
+                this.walls = [true, true, true, true]; // [top, right, bottom, left]
+                this.visited = false;
+            }
+
+            draw(targetCtx, size) {
+                let x = this.c * size;
+                let y = this.r * size;
+                targetCtx.strokeStyle = '#000000';
+                targetCtx.lineWidth = 1.5;
+
+                // 上
+                if (this.walls[0]) {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(x, y);
+                    targetCtx.lineTo(x + size, y);
+                    targetCtx.stroke();
+                }
+                // 右
+                if (this.walls[1]) {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(x + size, y);
+                    targetCtx.lineTo(x + size, y + size);
+                    targetCtx.stroke();
+                }
+                // 下
+                if (this.walls[2]) {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(x, y + size);
+                    targetCtx.lineTo(x + size, y + size);
+                    targetCtx.stroke();
+                }
+                // 左
+                if (this.walls[3]) {
+                    targetCtx.beginPath();
+                    targetCtx.moveTo(x, y);
+                    targetCtx.lineTo(x, y + size);
+                    targetCtx.stroke();
+                }
+            }
+        }
+
+        // ========== 迷宮生成與渲染 ==========
+        function setup() {
+            rows = parseInt(rowsInput.value) || 25;
+            cols = parseInt(colsInput.value) || 20;
+            cellSize = parseInt(cellSizeInput.value) || 20;
+
+            // 設置所有 canvas 大小
+            [canvas, printCanvasPuzzle, printCanvasSolution].forEach(c => {
+                c.width = cols * cellSize;
+                c.height = rows * cellSize;
+            });
+
+            // 初始化網格
+            grid = [];
+            for (let r = 0; r < rows; r++) {
+                let row = [];
+                for (let c = 0; c < cols; c++) {
+                    row.push(new Cell(r, c));
+                }
+                grid.push(row);
+            }
+            solutionPath = [];
+            showSolutionInUI = false;
+        }
+
+        function renderMaze(targetCanvas, withPath = false) {
+            const tCtx = targetCanvas.getContext('2d');
+            const size = cellSize;
+
+            // 背景
+            tCtx.fillStyle = "#FFFFFF";
+            tCtx.fillRect(0, 0, targetCanvas.width, targetCanvas.height);
+
+            // 繪製所有格子
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    grid[r][c].draw(tCtx, size);
+                }
+            }
+
+            // 邊框
+            tCtx.strokeStyle = '#000000';
+            tCtx.lineWidth = 3;
+            tCtx.strokeRect(0, 0, targetCanvas.width, targetCanvas.height);
+
+            // 起點和終點
+            drawDot(tCtx, 0, 0, "#000", size);
+            drawDot(tCtx, rows - 1, cols - 1, "#000", size);
+
+            // 繪製解答路徑
+            if (withPath && solutionPath.length > 0) {
+                tCtx.beginPath();
+                tCtx.strokeStyle = targetCanvas.id === 'mazeCanvas' ? '#FF3B30' : '#888';
+                tCtx.lineWidth = size / 4;
+                tCtx.setLineDash([]);
+                tCtx.lineJoin = 'round';
+                tCtx.lineCap = 'round';
+
+                let startX = solutionPath[0].c * size + size / 2;
+                let startY = solutionPath[0].r * size + size / 2;
+                tCtx.moveTo(startX, startY);
+
+                for (let i = 1; i < solutionPath.length; i++) {
+                    tCtx.lineTo(solutionPath[i].c * size + size / 2, solutionPath[i].r * size + size / 2);
+                }
+                tCtx.stroke();
+            }
+        }
+
+        function drawDot(tCtx, r, c, color, size) {
+            tCtx.fillStyle = color;
+            tCtx.beginPath();
+            tCtx.arc(c * size + size / 2, r * size + size / 2, size / 5, 0, Math.PI * 2);
+            tCtx.fill();
+        }
+
+        // ========== 迷宮生成算法 (DFS) ==========
+        function generateMazeSync() {
+            setup();
+            let current = grid[0][0];
+            current.visited = true;
+            let stack = [current];
+
+            while (stack.length > 0) {
+                let neighbors = [];
+                let { r, c } = current;
+
+                // 檢查四個方向的未訪問鄰居
+                if (r > 0 && !grid[r - 1][c].visited) neighbors.push(grid[r - 1][c]);
+                if (c < cols - 1 && !grid[r][c + 1].visited) neighbors.push(grid[r][c + 1]);
+                if (r < rows - 1 && !grid[r + 1][c].visited) neighbors.push(grid[r + 1][c]);
+                if (c > 0 && !grid[r][c - 1].visited) neighbors.push(grid[r][c - 1]);
+
+                if (neighbors.length > 0) {
+                    // 隨機選擇一個鄰居
+                    let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    next.visited = true;
+                    stack.push(current);
+
+                    // 移除两個格子之間的牆
+                    if (current.c - next.c === 1) {
+                        current.walls[3] = false;
+                        next.walls[1] = false;
+                    }
+                    else if (current.c - next.c === -1) {
+                        current.walls[1] = false;
+                        next.walls[3] = false;
+                    }
+                    if (current.r - next.r === 1) {
+                        current.walls[0] = false;
+                        next.walls[2] = false;
+                    }
+                    else if (current.r - next.r === -1) {
+                        current.walls[2] = false;
+                        next.walls[0] = false;
+                    }
+
+                    current = next;
+                } else {
+                    current = stack.pop();
+                }
+            }
+
+            solveMazeInternal();
+            renderMaze(canvas, showSolutionInUI);
+        }
+
+        // ========== 迷宮求解 (BFS) ==========
+        function solveMazeInternal() {
+            let start = grid[0][0], end = grid[rows - 1][cols - 1];
+            let queue = [start], visited = new Set(), parent = new Map();
+            visited.add(`0,0`);
+
+            while (queue.length > 0) {
+                let curr = queue.shift();
+                if (curr === end) break;
+
+                // 四個方向: 上、右、下、左
+                const dirs = [
+                    { dr: -1, dc: 0, w: 0 }, // 上
+                    { dr: 0, dc: 1, w: 1 },  // 右
+                    { dr: 1, dc: 0, w: 2 },  // 下
+                    { dr: 0, dc: -1, w: 3 }  // 左
+                ];
+
+                for (let d of dirs) {
+                    let nr = curr.r + d.dr, nc = curr.c + d.dc;
+                    if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                        let neighbor = grid[nr][nc];
+                        if (!visited.has(`${nr},${nc}`) && !curr.walls[d.w]) {
+                            visited.add(`${nr},${nc}`);
+                            parent.set(neighbor, curr);
+                            queue.push(neighbor);
+                        }
+                    }
+                }
+            }
+
+            // 回溯路徑
+            let path = [], temp = end;
+            while (temp) {
+                path.push(temp);
+                temp = parent.get(temp);
+            }
+            solutionPath = path.reverse();
+        }
+
+        // ========== Modal 控制 ==========
+        const openModal = () => {
+            settingsModal.classList.add('active');
+        };
+
+        const hideModal = () => {
+            settingsModal.classList.remove('active');
+        };
+
+        settingsToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openModal();
+        });
+
+        [closeModal, cancelBtn].forEach(el => {
+            el.addEventListener('click', () => {
+                hideModal();
+            });
+        });
+
+        // 點擊 modal 背景關閉
+        settingsModal.addEventListener('click', (e) => {
+            if (e.target === settingsModal) {
+                hideModal();
+            }
+        });
+
+        // 防止點擊 modal 內容時關閉
+        document.querySelector('.modal-content')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+        });
+
+        applyBtn.addEventListener('click', () => {
+            hideModal();
+            generateMazeSync();
+        });
+
+        // ========== 按鈕事件 ==========
+        generateBtn.addEventListener('click', generateMazeSync);
+
+        toggleSolveBtn.addEventListener('click', () => {
+            showSolutionInUI = !showSolutionInUI;
+            toggleSolveBtn.classList.toggle('text-black', showSolutionInUI);
+            renderMaze(canvas, showSolutionInUI);
+        });
+
+        printBtn.addEventListener('click', () => {
+            renderMaze(printCanvasPuzzle, false);
+            renderMaze(printCanvasSolution, true);
+            window.print();
+        });
+
+        // ========== 初始化 ==========
+        window.addEventListener('load', () => {
+            generateMazeSync();
+            lucide.createIcons();
+        });
+
+        // 頁面卸載清理
+        window.addEventListener('beforeunload', () => {
+            grid = [];
+            solutionPath = [];
+        });
+    </script>
+</body>
+
+</html>
